@@ -1,0 +1,53 @@
+import RPi.GPIO as GPIO
+import time
+import random
+
+# Pin numbers
+SEND_PIN = 8
+RECEIVE_PIN = 9
+
+# Setup GPIO mode and pins
+GPIO.setmode(GPIO.BOARD)
+GPIO.setup(SEND_PIN, GPIO.OUT)
+GPIO.setup(RECEIVE_PIN, GPIO.IN)
+
+def send_data(data):
+    GPIO.output(SEND_PIN, GPIO.HIGH)
+    time.sleep(0.1)  # Ensure receiver is ready
+    GPIO.output(SEND_PIN, GPIO.LOW)
+
+def receive_data():
+    while GPIO.input(RECEIVE_PIN) == GPIO.LOW:
+        time.sleep(0.001)  # Wait for the start of the transmission
+    data = ""
+    while True:
+        bit = GPIO.input(RECEIVE_PIN)
+        if bit == GPIO.HIGH:
+            break
+        time.sleep(0.001)
+    while True:
+        bit = GPIO.input(RECEIVE_PIN)
+        if bit == GPIO.HIGH:
+            break
+        time.sleep(0.001)
+        data += '1' if bit else '0'
+    return data
+
+try:
+    while True:
+        # Generate a random 3-digit number
+        random_number = str(random.randint(100, 999))
+
+        # Send the random number
+        send_data(random_number)
+
+        # Wait for reply
+        received_data = receive_data()
+
+        print("Sent:", random_number)
+        print("Received:", received_data)
+
+        time.sleep(1)  # Delay before sending the next number
+
+except KeyboardInterrupt:
+    GPIO.cleanup()
