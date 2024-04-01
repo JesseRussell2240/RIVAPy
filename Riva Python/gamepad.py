@@ -63,7 +63,7 @@ while True:
         print(f"Axis {i}: {axis_value}")
 
     # Print button states for debugging
-    print(button_pressed)
+    #print(button_pressed)
     
     # Draw buttons
     for button, pos in button_positions.items():
