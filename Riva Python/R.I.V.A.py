@@ -1,137 +1,101 @@
-#!pip install ikpy
-#!pip install pyserial
-#!pip install ipympl
-#!pip install jupyterlab-urdf
-#!jupyter nbextension enable --py widgetsnbextension --sys-prefix
-#!jupyter nbextension enable --py --sys-prefix widgetsnbextension
-#!jupyter nbextension enable --py --sys-prefix ipympl
-
-
-import ikpy.chain
-import ikpy.utils.plot as plot_utils
-
-import numpy as np
-import time
-import math
-
-import ipywidgets as widgets
-
 import serial
+import time
 
-import ikpy.chain
-import ikpy.link
+# Initialize serial port
+port = serial.Serial("/dev/ttyAMA0", 9600, timeout=1)
 
+# Initialize joint angles as all 0s
+joint_angles = [0, 0, 0, 0, 0, 0]
 
-my_chain = ikpy.chain.Chain.from_urdf_file("arm_urdf.urdf",active_links_mask=[False, True, True, True, True, True, True])
+# Define button mappings
+button_mappings = {
+    'forward': 1,
+    'backward': -1,
+    'right': 1,
+    'left': -1,
+    'joint1_inc': 1,
+    'joint1_dec': -1,
+    'joint2_inc': 1,
+    'joint2_dec': -1,
+    'joint3_inc': 1,
+    'joint3_dec': -1,
+    'joint4_inc': 1,
+    'joint4_dec': -1,
+    'joint5_inc': 1,
+    'joint5_dec': -1,
+    'joint6_inc': 1,
+    'joint6_dec': -1
+}
 
-target_position = [ 0, 0,0.58]
+# Function to send data
+def send_data(command, direction, angles):
+    data = f"{command},{direction},{','.join(map(str, angles))}\n"
+    port.write(data.encode('utf-8'))
 
-target_orientation = [-1, 0, 0]
+# Function to update joint angles
+def update_joint_angle(joint_index, increment):
+    joint_angles[joint_index] += increment
+    # Keep joint angles within -90 to 90 range
+    joint_angles[joint_index] = max(-90, min(90, joint_angles[joint_index]))
 
-ik = my_chain.inverse_kinematics(target_position, target_orientation, orientation_mode="Y")
-print("The angles of each joints are : ", list(map(lambda r:math.degrees(r),ik.tolist())))
+# Function to read keypad input
+def get_keypad_input():
+    # Placeholder function for simplicity
+    # Replace with actual keypad input reading logic
+  #  return 'joint1_inc', button_mappings['joint1_inc']
 
+#def get_keypad_input():
+    # Placeholder function to simulate keypad input
+    # Replace with actual keypad input reading logic
+    
+    # Simulate random button presses
+    button_press = random.randint(0, 5)
+    
+    # Assign buttons arbitrarily for demonstration
+    if button_press == 0:
+        return 'forward', button_mappings['forward']
+    elif button_press == 1:
+        return 'backward', button_mappings['backward']
+    elif button_press == 2:
+        return 'right', button_mappings['right']
+    elif button_press == 3:
+        return 'left', button_mappings['left']
+    elif button_press == 4:
+        return 'joint1_inc', button_mappings['joint1_inc']
+    elif button_press == 5:
+        return 'joint1_dec', button_mappings['joint1_dec']
 
-computed_position = my_chain.forward_kinematics(ik)
-print("Computed position: %s, original position : %s" % (computed_position[:3, 3], target_position))
-print("Computed position (readable) : %s" % [ '%.2f' % elem for elem in computed_position[:3, 3] ])
+# Function to configure button mappings
+def configure_button_mapping(button, action):
+    if button in button_mappings:
+        button_mappings[button] = action
+        print(f"Button '{button}' mapped to action '{action}'.")
+    else:
+        print(f"Button '{button}' not found in mappings.")
 
+# Main loop
+try:
+    while True:
+        # Get keypad input
+        button, action = get_keypad_input()
 
+        # Update joint angle based on the button pressed
+        if button.startswith('joint'):
+            joint_index = int(button[5]) - 1
+            update_joint_angle(joint_index, action)
 
-#%matplotlib widget
-%matplotlib widget
-import matplotlib.pyplot as plt
-fig, ax = plot_utils.init_3d_figure()
-fig.set_figheight(9)
-fig.set_figwidth(13)
-my_chain.plot(ik, ax, target=target_position)
-plt.xlim(-0.5, 0.5)
-plt.ylim(-0.5, 0.5)
-ax.set_zlim(0, 0.6)
-plt.ion()
+        # Handle other commands (e.g., forward, backward)
+        else:
+            command = button_mappings.get(button, 0)  # Get command from mappings
+            direction = action
 
+            # Send data
+            send_data(command, direction, joint_angles)
 
-def doIK():
-    global ik
-    old_position = ik.copy()
-    ik = my_chain.inverse_kinematics(target_position, target_orientation, orientation_mode="Z",
-                                     initial_position=old_position)
+        # Wait before sending again
+        time.sleep(0.1)
 
-
-def updatePlot():
-    ax.clear()
-    my_chain.plot(ik, ax, target=target_position)
-    plt.xlim(-0.5, 0.5)
-    plt.ylim(-0.5, 0.5)
-    ax.set_zlim(0, 0.6)
-    fig.canvas.draw()
-    fig.canvas.flush_events()
-
-
-def move(x, y, z):
-    global target_position
-    target_position = [x, y, z]
-    doIK()
-    updatePlot()
-
-    sendCommand(ik[1].item(), ik[2].item(), ik[3].item(), ik[4].item(), ik[5].item(), ik[6].item(), 1)
-
-    move(0.6, 0.4, 0.3)
-
-    # ser = serial.Serial('COM3',9600, timeout=1)
-
-    def sendCommand(a, b, c, d, e, f, move_time):
-        command = '0{:.2f} 1{:.2f} 2{:.2f} 3{:.2f} 4{:.2f} 5{:.2f} t{:.2f}\n'.format(math.degrees(a), math.degrees(b),
-                                                                                     math.degrees(c), math.degrees(d),
-                                                                                     math.degrees(e), math.degrees(f),
-                                                                                     move_time)
-        # ser.write(command.encode('ASCII'))
-
-        # we'll call sendCommand once with a move time of 4s so the robot slowly moves to the initial point
-        # sendCommand(ik[1].item(),ik[2].item(),ik[3].item(),ik[4].item(),ik[5].item(),ik[6].item(),4)
-
-        import ipywidgets as widgets
-        con = widgets.Controller()
-        display(con)
-
-        import asyncio
-
-        async def main():
-            x = 0
-            y = 0.25
-            z = 0.1
-            while con.buttons[9].value < 1:
-                xp = con.axes[0].value
-                yp = con.axes[1].value
-                zp = con.axes[2].value
-                if (abs(xp) > 0.1 or abs(yp) > 0.1 or abs(zp) > 0.1):
-                    x = x + xp / 100
-                    y = y - yp / 100
-                    z = z - zp / 100
-                    move(x, y, z)
-                await asyncio.sleep(0.05)
-
-        loop = asyncio.get_event_loop()
-        loop.create_task(main())
-
-        import asyncio
-
-        async def main():
-            x = 0
-            y = 0.25
-            z = 0.1
-            while con.buttons[9].value < 1:
-                xp = con.axes[0].value
-                yp = con.axes[1].value
-                zp = con.axes[2].value
-                if (abs(xp) > 0.1 or abs(yp) > 0.1 or abs(zp) > 0.1):
-                    x = x + xp / 100
-                    y = y - yp / 100
-                    z = z - zp / 100
-                    move(x, y, z)
-                await asyncio.sleep(0.05)
-
-        loop = asyncio.get_event_loop()
-        loop.create_task(main())
-
-        # ser.close()
+except KeyboardInterrupt:
+    print("Exiting...")
+finally:
+    port.close()  # Close the serial port when done
