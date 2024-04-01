@@ -1,0 +1,15 @@
+ # Normalize axis values to range from -1 to 1
+    normalized_axes = [value for value in axis_values]  # No need to normalize as they're already in range [-1, 1]
+
+    # Map axis values to discrete ranges [-1, 0, 1]
+    axes_ranges = []
+    for value in normalized_axes:
+        if value < -0.5:
+            axes_ranges.append(-1)
+        elif value > 0.5:
+            axes_ranges.append(1)
+        else:
+            axes_ranges.append(0)
+
+    # Print ranges for debugging
+    print("Axes ranges:", axes_ranges)
