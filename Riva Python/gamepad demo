@@ -1,0 +1,59 @@
+#pip install pygame
+import pygame
+import sys
+
+# Initialize pygame
+pygame.init()
+
+# Set up the screen
+screen_width = 400
+screen_height = 200
+screen = pygame.display.set_mode((screen_width, screen_height))
+pygame.display.set_caption("DualShock 4 Gamepad Display")
+
+# Colors
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
+
+# Button positions and sizes
+button_positions = {
+    "Square": (50, 50),
+    "Triangle": (150, 50),
+    "Circle": (250, 50),
+    "Cross": (200, 100),
+    "L1": (50, 150),
+    "R1": (250, 150)
+}
+
+button_pressed = {button: False for button in button_positions}
+
+# Main game loop
+while True:
+    screen.fill(WHITE)
+    
+    # Check events
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+    
+    # Get the state of the buttons from the DualShock 4 controller
+    # Replace this part with code to read button states from your controller
+    # For example, using the pygame joystick module or a library like inputs
+    # Here, for demonstration purposes, we're using keyboard keys as stand-ins
+    keys = pygame.key.get_pressed()
+    button_pressed["Square"] = keys[pygame.K_a]
+    button_pressed["Triangle"] = keys[pygame.K_s]
+    button_pressed["Circle"] = keys[pygame.K_d]
+    button_pressed["Cross"] = keys[pygame.K_f]
+    button_pressed["L1"] = keys[pygame.K_q]
+    button_pressed["R1"] = keys[pygame.K_e]
+
+    # Draw buttons
+    for button, pos in button_positions.items():
+        pygame.draw.circle(screen, BLACK if button_pressed[button] else WHITE, pos, 20)
+    
+    # Update the display
+    pygame.display.flip()
+
+
