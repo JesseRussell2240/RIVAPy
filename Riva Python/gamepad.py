@@ -1,25 +1,22 @@
 import pygame
 import sys
+import serial
+import time
 
 # Initialize pygame
 pygame.init()
 
-# Set up the screen
-screen_width = 400
-screen_height = 200
-screen = pygame.display.set_mode((screen_width, screen_height))
-pygame.display.set_caption("DualShock 4 Gamepad Display")
 
-# Colors
-BLACK = (0, 0, 0)
-WHITE = (255, 255, 255)
+# Initialize joint angles as all 0s
+joint_angles = [0, 0, 0, 0, 0, 0]
 
-# Button positions and sizes
+
+# Button positions and sizesgreat
 button_positions = {
-    "Square": (50, 50),
-    "Triangle": (150, 50),
-    "Circle": (250, 50),
-    "Cross": (200, 100),
+    "Cross": (50, 50),
+    "Square": (150, 50),
+    "Triangle": (250, 50),
+    "Circle": (200, 100),
     "L1": (50, 150),
     "R1": (250, 150)
 }
@@ -36,9 +33,29 @@ else:
     joystick = pygame.joystick.Joystick(0)
     joystick.init()
 
+def send_data():
+    data = str(joint_angles[0]) + "," + str(joint_angles[1]) + "," + str(joint_angles[2]) + "," + str(joint_angles[3]) + '\n' # Generate a random string of 5 numbers
+    port.write(data.encode('utf-8'))
+    
+    print("Sent:", data)
+    
+def receive_data():
+    try:
+        received_data = port.readline().decode('utf-8').strip()
+        print("Received:", received_data)
+        return received_data
+    except KeyboardInterrupt:
+        print("Exiting...")
+    finally:
+        port.close()  # Close the serial port when done
+        
+        
 # Main game loop
 while True:
-    screen.fill(WHITE)
+   
+    
+    port = serial.Serial("/dev/ttyAMA0", 9600, timeout=1)  # Open serial port
+
     
     # Check events
     for event in pygame.event.get():
@@ -49,25 +66,113 @@ while True:
     # Get the state of the buttons from the controller
     pygame.event.pump()  # Pump the event queue to update joystick events
     for i in range(joystick.get_numbuttons()):
-        button_pressed["Square"] = joystick.get_button(0)
-        button_pressed["Cross"] = joystick.get_button(1)
-        button_pressed["Circle"] = joystick.get_button(2)
-        button_pressed["Triangle"] = joystick.get_button(3)
+        button_pressed["Cross"] = joystick.get_button(0)
+        button_pressed["Circle"] = joystick.get_button(1)
+        button_pressed["Triangle"] = joystick.get_button(2)
+        button_pressed["Square"] = joystick.get_button(3)
         button_pressed["L1"] = joystick.get_button(4)
         button_pressed["R1"] = joystick.get_button(5)
+
+    axis_values = [joystick.get_axis(i) for i in range(6)]
 
     # Get the state of the axes from the controller
     for i in range(joystick.get_numaxes()):
         axis_value = joystick.get_axis(i)
         # Example: You can print out the axis values for debugging
-        print(f"Axis {i}: {axis_value}")
+        #print(f"Axis {i}: {axis_value}")
 
     # Print button states for debugging
     #print(button_pressed)
+    pressed_buttons = [button for button, pressed in button_pressed.items() if pressed]
+   # if pressed_buttons:
+    #    print("Current Buttons:", ", ".join(pressed_buttons))
+        
+     # Normalize axis values to range from -1 to 1
+    normalized_axes = [value for value in axis_values]  # No need to normalize as they're already in range [-1, 1]
+
+    # Map axis values to discrete ranges [-1, 0, 1]
+    axes_ranges = []
+    for value in normalized_axes:
+        if value < -0.5:
+            axes_ranges.append(-1)
+        elif value > 0.5:
+            axes_ranges.append(1)
+        else:
+            axes_ranges.append(0)
+
+    # Print ranges for debugging
+  #  print("Axes ranges:", axes_ranges)
     
-    # Draw buttons
-    for button, pos in button_positions.items():
-        pygame.draw.circle(screen, BLACK if button_pressed[button] else WHITE, pos, 20)
+        #j0
+    if (button_pressed["Cross"] == 1):        
+        if (axes_ranges[2] == 1):
+            joint_angles[0] = joint_angles[0] - 1
+        elif (axes_ranges[2] == 0):
+            joint_angles[0] = joint_angles[0] - 0.5
+        elif (axes_ranges[5] == 1):
+            joint_angles[0] = joint_angles[0] + 1
+        elif (axes_ranges[5] == 0):
+            joint_angles[0] = joint_angles[0] + 0.5
+            #over shoot protection
+        if(joint_angles[0] > 110):
+            joint_angles[0] = 110
+        elif (joint_angles[0] < -110):
+            joint_angles[0] = -110
+            
+            #j1
+    elif (button_pressed["Square"] == 1):        
+        if (axes_ranges[2] == 1):
+            joint_angles[1] = joint_angles[1] - 1
+        elif (axes_ranges[2] == 0):
+            joint_angles[1] = joint_angles[1] - 0.5
+        elif (axes_ranges[5] == 1):
+            joint_angles[1] = joint_angles[1] + 1
+        elif (axes_ranges[5] == 0):
+            joint_angles[1] = joint_angles[1] + 0.5
+                        #over shoot protection
+        if(joint_angles[1] > 110):
+            joint_angles[1] = 110
+        elif (joint_angles[1] < -110):
+            joint_angles[1] = -110
+            
+            #J2
+    elif (button_pressed["Triangle"] == 1):        
+        if (axes_ranges[2] == 1):
+            joint_angles[2] = joint_angles[2] - 1
+        elif (axes_ranges[2] == 0):
+            joint_angles[2] = joint_angles[2] - 0.5
+        elif (axes_ranges[5] == 1):
+            joint_angles[2] = joint_angles[2] + 1
+        elif (axes_ranges[5] == 0):
+            joint_angles[2] = joint_angles[2] + 0.5
+                        #over shoot protection
+        if(joint_angles[2] > 110):
+            joint_angles[2] = 110
+        elif (joint_angles[2] < -110):
+            joint_angles[2] = -110
+            
+                        
+            #J3
+    elif (button_pressed["Circle"] == 1):        
+        if (axes_ranges[2] == 1):
+            joint_angles[3] = joint_angles[3] - 1
+        elif (axes_ranges[2] == 0):
+            joint_angles[3] = joint_angles[3] - 0.5
+        elif (axes_ranges[5] == 1):
+            joint_angles[3] = joint_angles[3] + 1
+        elif (axes_ranges[5] == 0): 
+            joint_angles[3] = joint_angles[3] + 0.5
+                         #over shoot protection   
+        if(joint_angles[3] > 110):
+            joint_angles[3] = 110
+        elif (joint_angles[3] < -110):
+            joint_angles[3] = -110
     
-    # Update the display
-    pygame.display.update()
+    
+    send_data()
+   
+    time.sleep(0.1)  # Wait for a bit before attempting to read
+   
+    
+        
+              
