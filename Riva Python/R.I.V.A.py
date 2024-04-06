@@ -11,6 +11,11 @@ pygame.init()
 joint_angles = [0, 0, 0, 0, 0, 0]
 
 
+# Initialize motion values for forward/reverse, right/left, CCW, CW
+motion_values = [0, 0, 0, 0]  # [forward/reverse, right/left, CCW, CW]
+
+isParked = 0;
+
 # Button positions and sizesgreat
 button_positions = {
     "Cross": (50, 50),
@@ -34,7 +39,8 @@ else:
     joystick.init()
 
 def send_data():
-    data = str(joint_angles[0]) + "," + str(joint_angles[1]) + "," + str(joint_angles[2]) + "," + str(joint_angles[3]) + '\n' # Generate a random string of 5 numbers
+    #data = str(joint_angles[0]) + "," + str(joint_angles[1]) + "," + str(joint_angles[2]) + "," + str(joint_angles[3]) + '\n' # Generate a random string of 5 numbers
+    data = isParked + ',' + ','.join(map(str, joint_angles)) + ',' + ','.join(map(str, motion_values)) + '\n'
     port.write(data.encode('utf-8'))
     
     print("Sent:", data)
@@ -90,6 +96,8 @@ while True:
      # Normalize axis values to range from -1 to 1
     normalized_axes = [value for value in axis_values]  # No need to normalize as they're already in range [-1, 1]
 
+   
+
     # Map axis values to discrete ranges [-1, 0, 1]
     axes_ranges = []
     for value in normalized_axes:
@@ -102,7 +110,10 @@ while True:
 
     # Print ranges for debugging
   #  print("Axes ranges:", axes_ranges)
-    
+     # Map joystick axes to motion values
+    motion_values[0] = int(axis_values[1] * 100)  # Forward/Reverse
+    motion_values[1] = int(axis_values[0] * 100)  # Right/Left
+    motion_values[2] = int(axis_values[0] * 100)  # Cw/CCW
         #j0
     if (button_pressed["Cross"] == 1):        
         if (axes_ranges[2] == 1):
@@ -169,6 +180,12 @@ while True:
             joint_angles[3] = -110
     
     
+    if(button_pressed[R1] == 1){
+        isParked = 1;
+    } else {
+        isParked = 0;
+    }
+
     send_data()
    
     time.sleep(0.1)  # Wait for a bit before attempting to read
